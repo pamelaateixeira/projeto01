@@ -1,53 +1,69 @@
-const filename = __dirname + '/data.todo.json';
-let list: string[] = null!;
+const jsonFilePath = __dirname + '/data.todo.json';
+
+type Item = {
+  description: string;
+  completed: boolean;
+};
+
+const list: Item[] = await loadFromFile();
 
 async function loadFromFile() {
-  if (list !== null)
-    return
   try {
-    const file = Bun.file(filename);
+    const file = Bun.file(jsonFilePath);
     const content = await file.text();
-    list = JSON.parse(content) as string[];
-  } catch (error) {
-    Bun.write(filename, "[]");
-    list = [];
+    return JSON.parse(content) as Item[];
+  } catch (error: any) {
+    if (error.code === 'ENOENT')
+      return [];
+    throw error;
   }
 }
 
 async function saveToFile() {
-  await Bun.write(filename, JSON.stringify(list));
+  try {
+    await Bun.write(jsonFilePath, JSON.stringify(list));
+  } catch (error: any) {
+    throw new Error("Erro ao salvar os dados no arquivo: " + error.message);
+  }
 }
 
-// CRUD - CREATE
-export async function addItem(item: string) {
-  await loadFromFile();
-  list.push(item);
+// add
+// salva objeto com description e completed, em vez de string
+async function addItem(item: string) {
+  list.push({ description: item, completed: false });
   await saveToFile();
 }
 
-// CRUD - READ
-export async function getItems() {
-  await loadFromFile();
+// list
+async function getItems() {
   return list;
 }
 
-// CRUD - UPDATE
-export async function updateItem(index: number, newItem: string) {
-  await loadFromFile();
+// update
+async function updateItem(index: number, newItem: string) {
   if (index < 0 || index >= list.length)
-    throw new Error("Índice fora dos limites");
-  list[index] = newItem;
+    throw new Error("Index fora dos limites");
+  list[index].description = newItem;
   await saveToFile();
 }
 
-// CRUD - DELETE
-export async function removeItem(index: number) {
-  await loadFromFile();
+// remove
+async function removeItem(index: number) {
   if (index < 0 || index >= list.length)
-    throw new Error("Índice fora dos limites");
+    throw new Error("Index fora dos limites");
   list.splice(index, 1);
   await saveToFile();
 }
 
-// EXPORTA AS FUNÇÕES PARA USO EXTERNO
-export default { addItem, getItems, updateItem, removeItem };
+// alterna o status de concluído/pendente e retorna o novo valor
+async function toggleItem(index: number) {
+  if (index < 0 || index >= list.length)
+    throw new Error("Index fora dos limites");
+  list[index].completed = !list[index].completed;
+  await saveToFile();
+  return list[index].completed;
+}
+
+export default { addItem, getItems, updateItem, removeItem, toggleItem};
+
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         
